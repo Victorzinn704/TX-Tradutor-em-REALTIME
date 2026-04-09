@@ -37,6 +37,7 @@ from rtxlator import (
     DEFAULT_PROFILE,
     LATENCY_PROFILES,
     MODELS_DIR,
+    ensure_runtime_dirs,
     WHISPER_SR,
     AudioPipeline,
     GPUTranslator,
@@ -65,6 +66,8 @@ from rtxlator.constants import extract_contextual_segment
 from rtxlator.latency_profile import LatencyProfile
 from rtxlator.text_processing import make_translation_cache_key
 from rtxlator.display import render_result_line
+from rtxlator.overlay import TranslationOverlay, OverlayConfig
+from rtxlator.pipeline_bridge import runtime_status_summary
 
 if TYPE_CHECKING:
     from faster_whisper import WhisperModel
@@ -104,6 +107,8 @@ def warm_up_models(models: "list[WhisperModel]", source_lang: str | None, tuning
 # ─── Entry point ──────────────────────────────────────────────────────────────
 
 def main() -> None:
+    ensure_runtime_dirs()
+
     ap = argparse.ArgumentParser(
         description="Tradutor de audio em tempo real (RTX 5060 Ti + RedDragon)"
     )
@@ -140,6 +145,8 @@ def main() -> None:
     ap.add_argument("--silence-chunks",  type=int,   default=None)
     ap.add_argument("--distil-model", default="Systran/faster-distil-whisper-large-v3",
                     help="Modelo Distil-Whisper para perfil system_en (padrao: faster-distil-whisper-large-v3)")
+    ap.add_argument("--overlay", action="store_true",
+                    help="Ativar overlay flutuante de traducao (janela transparente always-on-top)")
     args = ap.parse_args()
     args.source = normalize_lang_choice(args.source)
 
@@ -164,6 +171,7 @@ def main() -> None:
 
     # ── Hardware ───────────────────────────────────────────────────────────
     console.rule("[bold cyan]Tradutor de Audio em Tempo Real - RTX 5060 Ti")
+    console.print(f"  {runtime_status_summary()}")
 
     if args.device:
         device       = args.device
@@ -348,11 +356,23 @@ def main() -> None:
         stream.start_stream()
 
     def current_status() -> str:
-        return build_runtime_status(device, args.model, tuning, status_parts, pipelines, args.interpretation_mode)
+        pstats = translator.provider_stats if hasattr(translator, 'provider_stats') else None
+        return build_runtime_status(device, args.model, tuning, status_parts, pipelines, args.interpretation_mode, provider_stats=pstats)
 
     status_str = current_status()
     console.print(f"\n[bold green]> ATIVO[/bold green] - [dim]{status_str}[/dim]")
-    console.print(f"[dim]UI: {ui_mode} | Ctrl+C para parar[/dim]\n")
+    console.print(f"[dim]UI: {ui_mode} | Ctrl+C para parar[/dim]")
+
+    # ── Overlay (opcional) ─────────────────────────────────────────────────
+    overlay = None
+    if args.overlay:
+        overlay = TranslationOverlay(OverlayConfig())
+        overlay.start()
+        # Conecta o overlay a todos os pipelines
+        for pipe in pipelines:
+            pipe.overlay_callback = overlay.push_result
+        console.print("[green][OK] Overlay flutuante ativo[/green]")
+    console.print()
 
     # ── Display ────────────────────────────────────────────────────────────
     try:
@@ -374,6 +394,8 @@ def main() -> None:
         except Exception:
             pass
     trans_pool.shutdown(wait=True)
+    if overlay:
+        overlay.stop()
     p.terminate()
     console.print("[green][OK] Encerrado.[/green]")
 

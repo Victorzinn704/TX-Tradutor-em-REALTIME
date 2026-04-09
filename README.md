@@ -1,5 +1,17 @@
 # Realtime Translator
 
+[![CI](https://github.com/Victorzinn704/TX-Tradutor-em-REALTIME/actions/workflows/ci.yml/badge.svg)](https://github.com/Victorzinn704/TX-Tradutor-em-REALTIME/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+
+> **🇺🇸 English** | [🇧🇷 Português](#visão-geral)
+>
+> Low-latency, GPU-accelerated real-time audio translator for Windows 11. Captures microphone and system audio via WASAPI, transcribes with Whisper (faster-whisper + CTranslate2), and translates using a 3-tier pipeline: **OPUS-MT** (~40ms local fast lane) → **Argos Translate** (offline fallback) → **Google Translate** (contextual mode only). Features language locking, two-stage VAD, personal glossary/context, and an optional Rust runtime for jitter-free audio capture.
+>
+> **Target hardware:** NVIDIA RTX GPU, Windows 11, Python 3.11+
+
+---
+
 Tradutor de áudio em tempo real para Windows 11, com ASR local na GPU, tradução offline e runtime híbrido Python + Rust.
 
 ---
@@ -46,6 +58,12 @@ Tradutor de áudio em tempo real para Windows 11, com ASR local na GPU, traduç�
 | Perfis de latência por fonte (`mic`, `system`, `system_en`) | ✅ |
 | Ponte de texto (tradução manual) | ✅ |
 | Runtime Rust (captura + DSP + scheduler) | ✅ |
+| Circuit breaker por provider (auto-recovery) | ✅ |
+| Rate limiter para Google Translate | ✅ |
+| Overlay flutuante de tradução (`--overlay`) | ✅ |
+| Health dashboard no terminal | ✅ |
+| Dispositivo de áudio configurável (env var) | ✅ |
+| Bridge Python ↔ Rust runtime | ✅ |
 
 ---
 

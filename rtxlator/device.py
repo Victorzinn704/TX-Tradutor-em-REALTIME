@@ -1,9 +1,23 @@
 """Detecção de hardware e listagem de dispositivos de áudio."""
 from __future__ import annotations
 
+import os
+
 import pyaudiowpatch as pyaudio
 
 from .constants import console
+
+# Padrões de nome para detecção de dispositivo preferido.
+# Configurável via variável de ambiente para suportar outros headsets/microfones.
+# Formato: nomes separados por pipe ("|"). Case-insensitive.
+# Exemplo: set RTXLATOR_PREFERRED_DEVICE="hyperx|steelseries"
+_DEFAULT_PREFERRED_PATTERNS = "redragon|red dragon|rdg"
+
+
+def _get_preferred_patterns() -> tuple[str, ...]:
+    """Retorna os padrões de nome do dispositivo preferido."""
+    raw = os.environ.get("RTXLATOR_PREFERRED_DEVICE", _DEFAULT_PREFERRED_PATTERNS)
+    return tuple(p.strip().lower() for p in raw.split("|") if p.strip())
 
 
 def detect_device() -> tuple[str, str, str]:
@@ -30,17 +44,20 @@ def detect_device() -> tuple[str, str, str]:
     return "cpu", "int8", "GPU nao encontrada — usando CPU"
 
 
-def find_redragon_devices(p: pyaudio.PyAudio) -> dict:
-    """Procura dispositivos RedDragon. Retorna {'mic': id|None, 'loopback': id|None}."""
-    PATTERNS = ("redragon", "red dragon", "rdg")
+def find_preferred_devices(p: pyaudio.PyAudio) -> dict:
+    """Procura dispositivos preferidos. Retorna {'mic': id|None, 'loopback': id|None}.
+
+    Padrões configuráveis via RTXLATOR_PREFERRED_DEVICE (default: redragon).
+    """
+    patterns = _get_preferred_patterns()
     mic_id      = None
     loopback_id = None
 
     for i in range(p.get_device_count()):
         d    = p.get_device_info_by_index(i)
         name = d["name"].lower()
-        is_rd = any(pat in name for pat in PATTERNS)
-        if not is_rd:
+        is_preferred = any(pat in name for pat in patterns)
+        if not is_preferred:
             continue
         if d.get("isLoopbackDevice", False):
             loopback_id = i
@@ -50,8 +67,13 @@ def find_redragon_devices(p: pyaudio.PyAudio) -> dict:
     return {"mic": mic_id, "loopback": loopback_id}
 
 
+# Alias de compatibilidade
+find_redragon_devices = find_preferred_devices
+
+
 def list_all_devices(p: pyaudio.PyAudio) -> None:
     """Imprime todos os dispositivos de áudio no terminal."""
+    patterns = _get_preferred_patterns()
     console.rule("[bold cyan]Dispositivos de Audio Disponiveis")
     console.print(f"\n  {'ID':<4} {'E/S':<7} {'SR':<8} {'Loop':<6} {'Host':<12} Nome")
     console.print("  " + "-" * 88)
@@ -69,8 +91,8 @@ def list_all_devices(p: pyaudio.PyAudio) -> None:
         if ch_out > 0: io_parts.append("OUT")
         io_str = "/".join(io_parts) or "-"
 
-        is_rd  = any(x in d["name"].lower() for x in ("redragon", "red dragon"))
-        marker = " [bold red]<- REDRAGON[/bold red]" if is_rd else ""
+        is_preferred = any(x in d["name"].lower() for x in patterns)
+        marker = " [bold red]<- PREFERRED[/bold red]" if is_preferred else ""
         loop_s = "Y" if loop else ""
 
         console.print(
@@ -78,3 +100,4 @@ def list_all_devices(p: pyaudio.PyAudio) -> None:
         )
 
     console.print()
+

@@ -1,10 +1,14 @@
-"""Tradutor local GPU/CPU via argostranslate + fallback Google Translate."""
+"""Tradutor local GPU/CPU via argostranslate + fallback Google Translate.
+
+Cada provider tem circuit breaker independente. Google tem rate limiter adicional.
+"""
 from __future__ import annotations
 
 import os
 import threading
 from pathlib import Path
 
+from .circuit_breaker import CircuitBreaker, ProviderStats, RateLimiter
 from .constants import (
     CONTEXT_CURRENT_MARKER,
     CONTEXT_END_MARKER,
@@ -21,6 +25,9 @@ class GPUTranslator:
 
     GPU se CUDA disponível via ARGOS_DEVICE_TYPE=cuda, senão CPU (~20-30ms).
     Fallback automático para Google Translate se par sem pacote disponível.
+
+    Circuit breakers: cada provider (opus-mt, argos, google) tem breaker
+    independente que abre após 3 falhas consecutivas e reabre após 30s.
     """
 
     def __init__(
@@ -31,7 +38,7 @@ class GPUTranslator:
         models_dir:          Path = MODELS_DIR,
         interpretation_mode: str  = "hybrid",
         personal_context:    PersonalLanguageContext | None = None,
-        opus_translator:     object | None = None,
+        opus_translator:     "OpusMTTranslator | None" = None,
     ):
         # ARGOS_DEVICE_TYPE deve ser definido ANTES do primeiro import argostranslate
         if device == "cuda":
@@ -52,6 +59,14 @@ class GPUTranslator:
         self._fallback_lock = threading.Lock()
         self._argos_ready   = self._try_init_argos()
 
+        # Circuit breakers por provider
+        self._breaker_opus   = CircuitBreaker("opus-mt", max_failures=3, cooldown_s=30)
+        self._breaker_argos  = CircuitBreaker("argos",   max_failures=3, cooldown_s=30)
+        self._breaker_google = CircuitBreaker("google",  max_failures=3, cooldown_s=60)
+
+        # Rate limiter para Google (max 3 req/s para evitar bloqueio de IP)
+        self._google_limiter = RateLimiter(max_per_second=3.0)
+
     def _try_init_argos(self) -> bool:
         try:
             import argostranslate.package   # noqa: F401
@@ -62,6 +77,15 @@ class GPUTranslator:
             return False
 
     # ── API pública ────────────────────────────────────────────────────────
+
+    @property
+    def provider_stats(self) -> dict[str, ProviderStats]:
+        """Snapshot das estatísticas de todos os providers."""
+        return {
+            "opus-mt": self._breaker_opus.stats,
+            "argos":   self._breaker_argos.stats,
+            "google":  self._breaker_google.stats,
+        }
 
     def translate(
         self,
@@ -153,31 +177,51 @@ class GPUTranslator:
         """Tenta OPUS-MT/CTranslate2. Retorna None se modelo não disponível."""
         if self._opus is None or src_lang in ("auto", ""):
             return None
+        if not self._breaker_opus.allow():
+            return None
         try:
             result, provider = self._opus.translate(text, src_lang)
-            return result if provider != "identity" else None
+            if provider != "identity":
+                self._breaker_opus.record_success()
+                return result
+            return None
         except Exception:
+            self._breaker_opus.record_failure()
             return None
 
     def _translate_argos(self, text: str, src_lang: str) -> str | None:
         if not (self._argos_ready and src_lang not in ("auto", "")):
             return None
+        if not self._breaker_argos.allow():
+            return None
         try:
             if self._ensure_package(src_lang):
                 import argostranslate.translate
                 result = argostranslate.translate.translate(text, src_lang, self.target_lang)
-                return result or None
+                if result:
+                    self._breaker_argos.record_success()
+                    return result
         except Exception as e:
+            self._breaker_argos.record_failure()
             console.print(f"[yellow]translate err ({src_lang}->{self.target_lang}): {e}[/yellow]")
         return None
 
     def _translate_google(self, text: str, src_lang: str) -> str | None:
+        if not self._breaker_google.allow():
+            return None
+        if not self._google_limiter.acquire_blocking(timeout=2.0):
+            return None
         try:
             from deep_translator import GoogleTranslator
             with self._fallback_lock:
                 source = src_lang if src_lang not in ("", "auto") else "auto"
-                return GoogleTranslator(source=source, target=self.target_lang).translate(text) or None
+                result = GoogleTranslator(source=source, target=self.target_lang).translate(text, timeout=5)
+                if result:
+                    self._breaker_google.record_success()
+                    return result
+                return None
         except Exception:
+            self._breaker_google.record_failure()
             return None
 
     def _translate_google_with_context(
@@ -237,3 +281,5 @@ class GPUTranslator:
             except Exception as e:
                 console.print(f"[red]  Erro ao instalar pacote {from_code}->{self.target_lang}: {e}[/red]")
                 return False
+
+

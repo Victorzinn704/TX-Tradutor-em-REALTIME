@@ -72,6 +72,7 @@ def build_runtime_status(
     sources:            list[str],
     pipelines:          "list[AudioPipeline]",
     interpretation_mode: str,
+    provider_stats:     "dict[str, object] | None" = None,
 ) -> str:
     parts = [f"{device.upper()} {model_name}", f"profile={tuning.name}", f"mode={interpretation_mode}"]
     parts.extend(sources)
@@ -115,7 +116,48 @@ def build_runtime_status(
             f"{lang_label}{partial_label}{qwait_label}{drop_label}{fallback_label}{ctx_label}"
         )
 
+    # ── Indicadores de saúde ──
+    health_parts = _build_health_indicators(device, pipelines, provider_stats)
+    if health_parts:
+        parts.append(health_parts)
+
     return " | ".join(parts)
+
+
+def _build_health_indicators(
+    device: str,
+    pipelines: "list[AudioPipeline]",
+    provider_stats: "dict[str, object] | None",
+) -> str:
+    """Gera uma string compacta de indicadores de saúde do sistema."""
+    indicators = []
+
+    # GPU
+    gpu_ok = device.lower() == "cuda"
+    indicators.append(f"GPU:{'OK' if gpu_ok else 'CPU'}")
+
+    # Drop rate agregado
+    total_fed = sum(getattr(p, "_total_chunks_fed", 0) for p in pipelines)
+    total_drop = sum(getattr(p, "_dropped_chunks", 0) for p in pipelines)
+    if total_fed > 0:
+        drop_pct = total_drop / total_fed
+        if drop_pct > 0.05:
+            indicators.append(f"[red]DROPS:{drop_pct:.0%}[/red]")
+        elif drop_pct > 0.01:
+            indicators.append(f"[yellow]drops:{drop_pct:.1%}[/yellow]")
+
+    # Provider health (circuit breakers)
+    if provider_stats:
+        for name, stats in provider_stats.items():
+            if hasattr(stats, "is_open") and stats.is_open:
+                cd = getattr(stats, "cooldown_remaining_s", 0)
+                indicators.append(f"[red]{name}:OPEN({cd:.0f}s)[/red]")
+            elif hasattr(stats, "consecutive_failures") and stats.consecutive_failures > 0:
+                indicators.append(f"[yellow]{name}:{stats.consecutive_failures}err[/yellow]")
+
+    if len(indicators) <= 1:
+        return ""
+    return "[" + " ".join(indicators) + "]"
 
 
 def render_result_line(result: Result) -> tuple[str, str]:

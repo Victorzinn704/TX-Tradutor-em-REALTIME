@@ -3,17 +3,9 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 
+from .constants import normalize_lang_choice
 from .context_store import CONTEXT_PATH, PersonalLanguageContext
 from .text_processing import TextEnvelope, TextProcessor
-
-
-def normalize_lang_choice(value: str | None) -> str | None:
-    if value is None:
-        return None
-    raw = value.strip().casefold()
-    if raw in ("", "detect", "detectar", "auto"):
-        return None
-    return raw
 
 
 @dataclass(frozen=True)
@@ -97,9 +89,11 @@ def build_text_bridge_session(config: TextBridgeConfig):
         MODELS_DIR,
         TranslationCache,
         detect_device,
+        ensure_runtime_dirs,
         GPUTranslator,
     )
 
+    ensure_runtime_dirs()
     device, compute_type, _ = detect_device()
     personal_context = PersonalLanguageContext(CONTEXT_PATH)
 

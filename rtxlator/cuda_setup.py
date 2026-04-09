@@ -20,12 +20,20 @@ import sys
 
 
 def preload_nvidia_dlls() -> None:
-    """Pré-carrega todas as DLLs NVIDIA instaladas via pip. Deve ser chamado ANTES de qualquer import pesado."""
+    """Pré-carrega DLLs NVIDIA conhecidas instaladas via pip. Deve ser chamado ANTES de qualquer import pesado."""
     if sys.platform != "win32":
         return
 
     import ctypes
+    import re
     import site
+
+    # Só carrega DLLs com nomes reconhecidos de bibliotecas NVIDIA
+    _KNOWN_PATTERNS = re.compile(
+        r"^(cublas|cublasLt|cudnn|cudart|cufft|curand|cusolver|cusparse|nvrtc|nvJitLink)"
+        r"(64)?(_\d+)?\.dll$",
+        re.IGNORECASE,
+    )
 
     for sp in site.getsitepackages():
         nvidia_root = os.path.join(sp, "nvidia")
@@ -41,7 +49,7 @@ def preload_nvidia_dlls() -> None:
             except Exception:
                 pass
             for dll_name in os.listdir(bin_dir):
-                if dll_name.lower().endswith(".dll"):
+                if _KNOWN_PATTERNS.match(dll_name):
                     try:
                         ctypes.CDLL(os.path.join(bin_dir, dll_name))
                     except Exception:

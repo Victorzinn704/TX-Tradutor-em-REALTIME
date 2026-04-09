@@ -29,6 +29,7 @@ jobs:
             ".gitignore",
             "APRESENTACAO_TECNICA_COMPLETA.md",
             "ARCHITECTURE.md",
+            "LICENSE",
             "README.md",
             "baixar_opus_pt_en.bat",
             "compilar_rust.bat",
@@ -42,10 +43,6 @@ jobs:
             "realtime_translator.py",
             "requirements.txt",
             "rodar.bat",
-            "test_context_manager.py",
-            "test_realtime_translator.py",
-            "test_source_profiles.py",
-            "test_text_processing.py",
             "tests",
             "texto_bridge.py"
           )

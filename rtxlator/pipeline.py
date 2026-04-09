@@ -43,6 +43,7 @@ class AudioPipeline:
         channels:      int,
         tuning:        LatencyProfile,
         source_kind:   str = "mic",
+        overlay_callback: "callable | None" = None,
     ):
         tuned_profile = apply_source_profile(tuning, source_kind)
 
@@ -60,6 +61,7 @@ class AudioPipeline:
         self.channels      = channels
         self.tuning        = tuned_profile
         self.source_kind   = source_kind
+        self.overlay_callback = overlay_callback
 
         queue_size = max(16, int(self.tuning.queue_seconds / self.tuning.chunk_seconds))
         self._queue: Queue[np.ndarray] = Queue(maxsize=queue_size)
@@ -464,4 +466,10 @@ class AudioPipeline:
             try:
                 self.ui_queue.put_nowait(r)
             except Full:
+                pass
+
+        if self.overlay_callback is not None:
+            try:
+                self.overlay_callback(r)
+            except Exception:
                 pass

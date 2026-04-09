@@ -3,6 +3,25 @@ name = "realtime-translator"
 version = "0.1.0"
 description = "Tradutor de áudio e texto em tempo real com foco em baixa latência no Windows."
 requires-python = ">=3.11"
+license = {file = "LICENSE"}
+authors = [{name = "Victor Zinn"}]
+keywords = ["translation", "realtime", "whisper", "asr", "speech-to-text", "gpu", "cuda"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+
+[project.urls]
+Homepage = "https://github.com/Victorzinn704/TX-Tradutor-em-REALTIME"
+Repository = "https://github.com/Victorzinn704/TX-Tradutor-em-REALTIME"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.realtime_translator]
 default_runtime_dir = ".runtime"

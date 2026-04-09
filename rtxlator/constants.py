@@ -14,16 +14,31 @@ from rich.console import Console
 MODELS_DIR   = Path(__file__).resolve().parent.parent / "models"
 HF_CACHE_DIR = MODELS_DIR / "hf"
 
-MODELS_DIR.mkdir(parents=True, exist_ok=True)
-HF_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+_RUNTIME_INITIALIZED = False
 
-os.environ.setdefault("HF_HOME", str(HF_CACHE_DIR))
-os.environ.setdefault("HUGGINGFACE_HUB_CACHE", str(HF_CACHE_DIR / "hub"))
-os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
-# Usa MiniSBD (ONNX, sem torch.load) em vez de Stanza para SBD no argostranslate.
-# Stanza falha com PyTorch ≥2.6 (weights_only=True) nos modelos bundled.
-os.environ.setdefault("ARGOS_CHUNK_TYPE", "MINISBD")
+def ensure_runtime_dirs() -> None:
+    """Cria diretórios e configura variáveis de ambiente.
+
+    Deve ser chamado uma vez durante o startup da aplicação.
+    Não é chamado automaticamente no import para manter testes seguros.
+    """
+    global _RUNTIME_INITIALIZED
+    if _RUNTIME_INITIALIZED:
+        return
+
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    HF_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+    os.environ.setdefault("HF_HOME", str(HF_CACHE_DIR))
+    os.environ.setdefault("HUGGINGFACE_HUB_CACHE", str(HF_CACHE_DIR / "hub"))
+    os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+
+    # Usa MiniSBD (ONNX, sem torch.load) em vez de Stanza para SBD no argostranslate.
+    # Stanza falha com PyTorch ≥2.6 (weights_only=True) nos modelos bundled.
+    os.environ.setdefault("ARGOS_CHUNK_TYPE", "MINISBD")
+
+    _RUNTIME_INITIALIZED = True
 
 # ─── Parâmetros de áudio / cache ──────────────────────────────────────────────
 
