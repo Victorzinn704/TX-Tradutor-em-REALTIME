@@ -7,6 +7,8 @@ scipy>=1.11.0
 numpy>=1.24.0
 rich>=13.7.0
 sentencepiece>=0.1.99
+transformers>=4.41.0
+huggingface-hub>=0.24.0
 
 # Tradução local offline (ctranslate2 internamente — sem chamadas HTTP, ~20-30ms)
 argostranslate>=1.9.6

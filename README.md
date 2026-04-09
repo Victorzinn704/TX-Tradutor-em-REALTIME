@@ -57,6 +57,18 @@ instalar.bat
 
 O script cria o `.venv`, instala as dependências Python e baixa os modelos Argos padrão.
 
+Na fast lane `OPUS-MT`, o instalador hoje prepara os pares públicos `en -> pt` e `pt -> en`.
+Para `es -> pt`, o projeto continua usando `Argos Translate`, porque esse par não está exposto como modelo público estável no Hub.
+
+Importante: para esses modelos públicos do `Hugging Face`, normalmente **não é necessário login**.
+Se o Hub limitar o download, o comando correto é em terminal:
+
+```bat
+.venv\Scripts\hf.exe auth login
+```
+
+Esse fluxo pede token no console; ele não abre navegador automaticamente.
+
 Para compilar o runtime Rust (opcional, melhora jitter e uso de CPU):
 
 ```bat

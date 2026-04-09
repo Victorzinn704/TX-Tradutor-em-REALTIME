@@ -12,9 +12,27 @@ from .constants import MODELS_DIR, console
 @dataclass(frozen=True)
 class _LoadedOpusPair:
     translator: Any
-    source_tokenizer: Any
-    target_tokenizer: Any
+    tokenizer: Any
     source_prefix: str | None = None
+
+
+_TOKENIZER_FILES = (
+    "tokenizer_config.json",
+    "vocab.json",
+    "source.spm",
+    "target.spm",
+)
+
+_OPUS_REPO_CANDIDATES: dict[tuple[str, str], list[tuple[str, str | None]]] = {
+    ("en", "pt"): [
+        ("Helsinki-NLP/opus-mt-tc-big-en-pt", None),
+        ("Helsinki-NLP/opus-mt-en-ROMANCE", ">>pt<<"),
+    ],
+    ("pt", "en"): [
+        ("Helsinki-NLP/opus-mt-mul-en", ">>pt<<"),
+        ("Helsinki-NLP/opus-mt-tc-big-mul-en", ">>pt<<"),
+    ],
+}
 
 
 class OpusMTTranslator:
@@ -82,7 +100,8 @@ class OpusMTTranslator:
         if pair.source_prefix:
             source_text = f"{pair.source_prefix} {source_text}".strip()
 
-        source_tokens = pair.source_tokenizer.encode(source_text, out_type=str)
+        source_ids = list(pair.tokenizer.encode(source_text))
+        source_tokens = list(pair.tokenizer.convert_ids_to_tokens(source_ids))
         if not source_tokens:
             return text, "identity"
 
@@ -99,7 +118,8 @@ class OpusMTTranslator:
             return text, "identity"
 
         output_tokens = self._clean_output_tokens(list(hypotheses[0]))
-        translated = pair.target_tokenizer.decode_pieces(output_tokens).strip()
+        output_ids = pair.tokenizer.convert_tokens_to_ids(output_tokens)
+        translated = pair.tokenizer.decode(output_ids, skip_special_tokens=True).strip()
         return (translated or clean_text), "opus-mt"
 
     def preload(self, src_langs: list[str]) -> threading.Thread:
@@ -150,39 +170,86 @@ class OpusMTTranslator:
     def _load_pair(self, source_lang: str, target_lang: str) -> _LoadedOpusPair | None:
         pair_dir = self.models_dir / "opus" / f"{source_lang}-{target_lang}"
         model_file = pair_dir / "model.bin"
-        source_spm = pair_dir / "source.spm"
-        target_spm = pair_dir / "target.spm"
 
         if not model_file.exists():
             return None
-        if not source_spm.exists() or not target_spm.exists():
-            console.print(
-                f"[yellow]OPUS-MT {source_lang}->{target_lang} sem tokenizers em {pair_dir}[/yellow]"
-            )
+
+        if not self._ensure_tokenizer_assets(pair_dir, source_lang, target_lang):
             return None
 
-        ctranslate2_module, sentencepiece_module = self._import_runtime_deps()
+        ctranslate2_module, transformers_module = self._import_runtime_deps()
         translator = ctranslate2_module.Translator(
             str(pair_dir),
             device=self.device,
             compute_type=self.compute_type,
         )
-        source_tokenizer = sentencepiece_module.SentencePieceProcessor(model_file=str(source_spm))
-        target_tokenizer = sentencepiece_module.SentencePieceProcessor(model_file=str(target_spm))
+        tokenizer = transformers_module.MarianTokenizer.from_pretrained(
+            str(pair_dir),
+            local_files_only=True,
+        )
         source_prefix = self._read_optional_text(pair_dir / "source_prefix.txt")
 
         return _LoadedOpusPair(
             translator=translator,
-            source_tokenizer=source_tokenizer,
-            target_tokenizer=target_tokenizer,
+            tokenizer=tokenizer,
             source_prefix=source_prefix,
         )
 
+    def _ensure_tokenizer_assets(self, pair_dir: Path, source_lang: str, target_lang: str) -> bool:
+        missing_files = [name for name in _TOKENIZER_FILES if not (pair_dir / name).exists()]
+        if not missing_files:
+            return True
+
+        repo_candidates = self._resolve_repo_candidates(pair_dir, source_lang, target_lang)
+        if not repo_candidates:
+            console.print(
+                f"[yellow]OPUS-MT {source_lang}->{target_lang} sem tokenizer local e sem repo conhecido[/yellow]"
+            )
+            return False
+
+        hub_module = self._import_hub_dep()
+        for repo_id, source_prefix in repo_candidates:
+            try:
+                for filename in missing_files:
+                    downloaded = Path(hub_module.hf_hub_download(repo_id=repo_id, filename=filename))
+                    (pair_dir / filename).write_bytes(downloaded.read_bytes())
+                (pair_dir / "hf_repo.txt").write_text(repo_id, encoding="utf-8")
+                if source_prefix and not (pair_dir / "source_prefix.txt").exists():
+                    (pair_dir / "source_prefix.txt").write_text(source_prefix, encoding="utf-8")
+                console.print(f"[green][OK] Tokenizer OPUS-MT reparado de {repo_id}[/green]")
+                return True
+            except Exception as exc:
+                console.print(
+                    f"[yellow]Falha ao baixar tokenizer OPUS-MT de {repo_id}: {exc}[/yellow]"
+                )
+
+        console.print(
+            f"[yellow]OPUS-MT {source_lang}->{target_lang} sem tokenizer local utilizavel[/yellow]"
+        )
+        return False
+
+    def _resolve_repo_candidates(
+        self,
+        pair_dir: Path,
+        source_lang: str,
+        target_lang: str,
+    ) -> list[tuple[str, str | None]]:
+        repo_hint = self._read_optional_text(pair_dir / "hf_repo.txt")
+        if repo_hint:
+            source_prefix = self._read_optional_text(pair_dir / "source_prefix.txt")
+            return [(repo_hint, source_prefix)]
+        return list(_OPUS_REPO_CANDIDATES.get((source_lang, target_lang), ()))
+
     def _import_runtime_deps(self) -> tuple[ModuleType, ModuleType]:
         import ctranslate2
-        import sentencepiece
+        import transformers
 
-        return ctranslate2, sentencepiece
+        return ctranslate2, transformers
+
+    def _import_hub_dep(self) -> ModuleType:
+        import huggingface_hub
+
+        return huggingface_hub
 
     @staticmethod
     def _read_optional_text(path: Path) -> str | None:

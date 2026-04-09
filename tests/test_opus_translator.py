@@ -15,15 +15,22 @@ if str(PROJECT_ROOT) not in sys.path:
 from rtxlator.opus_translator import OpusMTTranslator
 
 
-class FakeSentencePieceProcessor:
-    def __init__(self, model_file: str) -> None:
-        self.model_file = model_file
+class FakeTokenizer:
+    def __init__(self, model_path: str) -> None:
+        self.model_path = model_path
 
-    def encode(self, text: str, out_type=str) -> list[str]:
-        return [part for part in text.strip().split() if part]
+    def encode(self, text: str) -> list[str]:
+        return [part for part in text.strip().split() if part] + ["</s>"]
 
-    def decode_pieces(self, tokens: list[str]) -> str:
-        return " ".join(tokens)
+    def convert_ids_to_tokens(self, ids: list[str]) -> list[str]:
+        return list(ids)
+
+    def convert_tokens_to_ids(self, tokens: list[str]) -> list[str]:
+        return list(tokens)
+
+    def decode(self, ids: list[str], skip_special_tokens: bool = True) -> str:
+        cleaned = [token for token in ids if not skip_special_tokens or token != "</s>"]
+        return " ".join(token for token in cleaned if token != "</s>")
 
 
 class FakeCTranslateTranslator:
@@ -45,10 +52,12 @@ class FakeCTranslateTranslator:
 def fake_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
     ctranslate2_module = ModuleType("ctranslate2")
     ctranslate2_module.Translator = FakeCTranslateTranslator
-    sentencepiece_module = ModuleType("sentencepiece")
-    sentencepiece_module.SentencePieceProcessor = FakeSentencePieceProcessor
+    transformers_module = ModuleType("transformers")
+    transformers_module.MarianTokenizer = SimpleNamespace(
+        from_pretrained=lambda model_path, local_files_only=True: FakeTokenizer(model_path)
+    )
     monkeypatch.setitem(sys.modules, "ctranslate2", ctranslate2_module)
-    monkeypatch.setitem(sys.modules, "sentencepiece", sentencepiece_module)
+    monkeypatch.setitem(sys.modules, "transformers", transformers_module)
 
 
 @pytest.fixture
@@ -58,6 +67,8 @@ def fake_model_tree(tmp_path: Path) -> Path:
     (pair_dir / "model.bin").write_bytes(b"fake-model")
     (pair_dir / "source.spm").write_text("fake-spm", encoding="utf-8")
     (pair_dir / "target.spm").write_text("fake-spm", encoding="utf-8")
+    (pair_dir / "tokenizer_config.json").write_text("{}", encoding="utf-8")
+    (pair_dir / "vocab.json").write_text("{}", encoding="utf-8")
     return tmp_path / "models"
 
 

@@ -88,10 +88,9 @@ if errorlevel 1 (
 echo.
 echo [6/6] Preparando modelos OPUS-MT para fast lane...
 if not exist models\opus\en-pt mkdir models\opus\en-pt >nul 2>&1
-if not exist models\opus\es-pt mkdir models\opus\es-pt >nul 2>&1
 if not exist models\opus\pt-en mkdir models\opus\pt-en >nul 2>&1
 
-pip install ctranslate2 transformers sentencepiece --quiet
+pip install ctranslate2 transformers sentencepiece huggingface-hub --quiet
 if errorlevel 1 (
     echo   [AVISO] Nao foi possivel garantir ferramentas de conversao OPUS-MT.
 ) else (
@@ -99,11 +98,12 @@ if errorlevel 1 (
     if not exist models\opus\en-pt\model.bin (
         call :PREPARE_OPUS_MODEL "Helsinki-NLP/opus-mt-en-ROMANCE" "models\\opus\\en-pt" ">>pt<<"
     )
-    call :PREPARE_OPUS_MODEL "Helsinki-NLP/opus-mt-es-pt" "models\\opus\\es-pt" ""
     call :PREPARE_OPUS_MODEL "Helsinki-NLP/opus-mt-mul-en" "models\\opus\\pt-en" ">>pt<<"
     if not exist models\opus\pt-en\model.bin (
         call :PREPARE_OPUS_MODEL "Helsinki-NLP/opus-mt-tc-big-mul-en" "models\\opus\\pt-en" ">>pt<<"
     )
+    echo   [INFO] Fast lane OPUS-MT publico confirmado para en->pt e pt->en.
+    echo          es->pt continua coberto localmente por Argos Translate.
 )
 
 :: Testa se CUDA funciona com ctranslate2
@@ -164,21 +164,25 @@ if exist "%OUT_DIR%\model.bin" (
     if not "%SOURCE_PREFIX%"=="" (
         > "%OUT_DIR%\source_prefix.txt" echo %SOURCE_PREFIX%
     )
+    > "%OUT_DIR%\hf_repo.txt" echo %HF_MODEL%
+    call :ENSURE_OPUS_TOKENIZER_FILES "%HF_MODEL%" "%OUT_DIR%"
     exit /b 0
 )
 
-ct2-transformers-converter --model %HF_MODEL% --output_dir "%OUT_DIR%" --force >nul 2>&1
+set "CT2_CONVERTER=.venv\\Scripts\\ct2-transformers-converter.exe"
+if not exist %CT2_CONVERTER% set "CT2_CONVERTER=ct2-transformers-converter"
+
+%CT2_CONVERTER% --model %HF_MODEL% --output_dir "%OUT_DIR%" --copy_files source.spm target.spm tokenizer_config.json vocab.json --force >nul 2>&1
 if errorlevel 1 (
-    echo     [AVISO] Falha ao converter %HF_MODEL% — verifique conexao e espaco em disco.
+    echo     [AVISO] Falha ao converter %HF_MODEL%.
+    echo             Isso normalmente e conexao, rate limit do Hugging Face ou falta de espaco.
+    echo             Login no Hugging Face NAO abre navegador aqui; se precisar, rode no terminal:
+    echo             .venv\\Scripts\\hf.exe auth login
     exit /b 0
 )
 
-python -c "from pathlib import Path; import shutil; import sys; from huggingface_hub import hf_hub_download; model=sys.argv[1]; out=Path(sys.argv[2]); out.mkdir(parents=True, exist_ok=True); shutil.copyfile(hf_hub_download(repo_id=model, filename='source.spm'), out / 'source.spm'); shutil.copyfile(hf_hub_download(repo_id=model, filename='target.spm'), out / 'target.spm')" "%HF_MODEL%" "%OUT_DIR%" >nul 2>&1
-if errorlevel 1 (
-    echo     [AVISO] Modelo convertido, mas source.spm/target.spm nao puderam ser copiados.
-) else (
-    echo     Tokenizers SentencePiece salvos.
-)
+> "%OUT_DIR%\hf_repo.txt" echo %HF_MODEL%
+call :ENSURE_OPUS_TOKENIZER_FILES "%HF_MODEL%" "%OUT_DIR%"
 
 if not "%SOURCE_PREFIX%"=="" (
     > "%OUT_DIR%\source_prefix.txt" echo %SOURCE_PREFIX%
@@ -188,5 +192,17 @@ if exist "%OUT_DIR%\model.bin" (
     echo     [OK] Modelo OPUS-MT pronto.
 ) else (
     echo     [AVISO] Conversao concluida sem model.bin detectado.
+)
+exit /b 0
+
+:ENSURE_OPUS_TOKENIZER_FILES
+set "HF_MODEL=%~1"
+set "OUT_DIR=%~2"
+python -c "from pathlib import Path; import shutil; import sys; from huggingface_hub import hf_hub_download; model=sys.argv[1]; out=Path(sys.argv[2]); files=('source.spm','target.spm','tokenizer_config.json','vocab.json'); out.mkdir(parents=True, exist_ok=True); [shutil.copyfile(hf_hub_download(repo_id=model, filename=name), out / name) for name in files if not (out / name).exists()]" "%HF_MODEL%" "%OUT_DIR%" >nul 2>&1
+if errorlevel 1 (
+    echo     [AVISO] Modelo convertido, mas os arquivos de tokenizer nao puderam ser copiados agora.
+    echo             O runtime vai tentar reparar isso automaticamente no primeiro uso.
+) else (
+    echo     Tokenizer local salvo.
 )
 exit /b 0
