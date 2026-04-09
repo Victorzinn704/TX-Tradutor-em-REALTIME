@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members  = [
+    "audio",
+    "dsp",
+    "sched",
+    "ffi",
+]
+
+[workspace.dependencies]
+rubato    = "0.15"
+rtrb      = "0.3"
+thiserror = "1"
+tracing   = "0.1"
+pyo3      = "0.22"

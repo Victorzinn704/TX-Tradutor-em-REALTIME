@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pytest
+
+      - name: Run Python tests
+        shell: pwsh
+        run: |
+          python -m pytest -q
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Test Rust DSP crate
+        shell: pwsh
+        working-directory: runtime-rs
+        run: cargo test -p rtxlator-dsp
+
+      - name: Check Rust audio crate
+        shell: pwsh
+        working-directory: runtime-rs
+        run: cargo check -p rtxlator-audio --target x86_64-pc-windows-msvc
+
+      - name: Test Rust audio crate
+        shell: pwsh
+        working-directory: runtime-rs
+        run: cargo test -p rtxlator-audio

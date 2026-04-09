@@ -1,0 +1,18 @@
+# Core
+pyaudiowpatch>=0.2.12
+faster-whisper>=1.0.0
+ctranslate2>=4.7.1
+deep-translator>=1.11.4
+scipy>=1.11.0
+numpy>=1.24.0
+rich>=13.7.0
+sentencepiece>=0.1.99
+
+# Tradução local offline (ctranslate2 internamente — sem chamadas HTTP, ~20-30ms)
+argostranslate>=1.9.6
+
+# CUDA runtime (Windows — necessário para faster-whisper e argostranslate usarem GPU)
+# Se der erro, instale o CUDA Toolkit manualmente: https://developer.nvidia.com/cuda-downloads
+nvidia-cublas-cu12
+nvidia-cudnn-cu12
+nvidia-cuda-runtime-cu12

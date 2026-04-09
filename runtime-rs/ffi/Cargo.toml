@@ -1,0 +1,13 @@
+[package]
+name    = "rtxlator-ffi"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name       = "runtime_rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3          = { workspace = true, features = ["extension-module"] }
+rtxlator-dsp  = { path = "../dsp" }
+rtxlator-sched = { path = "../sched" }

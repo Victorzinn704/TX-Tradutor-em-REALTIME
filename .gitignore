@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.claude/
+*.pyc
+*.bak
+.runtime/
+models/
+.tmp_*
+user_language_context.json
+runtime-rs/target/
+rtxlator/runtime_rs.pyd
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+pt)

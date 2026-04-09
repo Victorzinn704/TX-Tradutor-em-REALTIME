@@ -1,0 +1,8 @@
+[package]
+name    = "rtxlator-sched"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rtrb    = { workspace = true }
+tracing = { workspace = true }

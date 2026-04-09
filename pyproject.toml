@@ -1,0 +1,10 @@
+[project]
+name = "realtime-translator"
+version = "0.1.0"
+description = "Tradutor de áudio e texto em tempo real com foco em baixa latência no Windows."
+requires-python = ">=3.11"
+
+[tool.realtime_translator]
+default_runtime_dir = ".runtime"
+default_ui_mode = "stable"
+default_latency_profile = "ultra"
