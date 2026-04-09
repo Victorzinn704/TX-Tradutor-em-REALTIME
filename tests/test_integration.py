@@ -219,9 +219,9 @@ class TestCircuitBreakerWithTranslator:
         cache = TranslationCache(max_size=10)
         processor = TextProcessor(translator, cache)
 
-        # 10 traduções em sequência devem funcionar
+        # 10 traduções em sequência devem funcionar sem falhar por rate limit
         for i in range(10):
-            assert limiter.acquire() is True
+            assert limiter.acquire_blocking(timeout=1.0) is True
             result = processor.resolve(TextEnvelope(
                 source="MIC",
                 raw_text=f"text {i}",
