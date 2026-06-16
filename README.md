@@ -4,9 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 
-> **🇺🇸 English** | [🇧🇷 Português](#visão-geral)
->
-> Low-latency, GPU-accelerated real-time audio translator for Windows 11. Captures microphone and system audio via WASAPI, transcribes with Whisper (faster-whisper + CTranslate2), and translates using a 3-tier pipeline: **OPUS-MT** (~40ms local fast lane) → **Argos Translate** (offline fallback) → **Google Translate** (contextual mode only). Features language locking, two-stage VAD, personal glossary/context, and an optional Rust runtime for jitter-free audio capture.
+> Low-latency, GPU-accelerated real-time audio translator for Windows 11. Captures microphone and system audio via WASAPI, transcribes with Whisper (faster-whisper + CTranslate2), and translates using a 3-tier pipeline: **OPUS-MT** (~40ms local fast lane) -> **Argos Translate** (offline fallback) -> **Google Translate** (contextual mode only). Features language locking, two-stage VAD, personal glossary/context, and an optional Rust runtime for jitter-free audio capture.
 >
 > **Target hardware:** NVIDIA RTX GPU, Windows 11, Python 3.11+
 
@@ -46,24 +44,24 @@ Tradutor de áudio em tempo real para Windows 11, com ASR local na GPU, traduç�
 
 | Funcionalidade | Estado |
 |---|---|
-| Captura de microfone (WASAPI) | ✅ |
-| Captura de áudio do sistema (loopback WASAPI) | ✅ |
-| ASR com faster-whisper na GPU | ✅ |
-| Language lock por fonte/sessão | ✅ |
-| Tradução local com OPUS-MT/CTranslate2 | ✅ |
-| Fallback Argos Translate | ✅ |
-| Fallback Google Translate (contextual) | ✅ |
-| Contexto pessoal (glossário, correções, regras) | ✅ |
-| Telemetria de latência em tempo real | ✅ |
-| Perfis de latência por fonte (`mic`, `system`, `system_en`) | ✅ |
-| Ponte de texto (tradução manual) | ✅ |
-| Runtime Rust (captura + DSP + scheduler) | ✅ |
-| Circuit breaker por provider (auto-recovery) | ✅ |
-| Rate limiter para Google Translate | ✅ |
-| Overlay flutuante de tradução (`--overlay`) | ✅ |
-| Health dashboard no terminal | ✅ |
-| Dispositivo de áudio configurável (env var) | ✅ |
-| Bridge Python ↔ Rust runtime | ✅ |
+| Captura de microfone (WASAPI) | Implementado |
+| Captura de áudio do sistema (loopback WASAPI) | Implementado |
+| ASR com faster-whisper na GPU | Implementado |
+| Language lock por fonte/sessão | Implementado |
+| Tradução local com OPUS-MT/CTranslate2 | Implementado |
+| Fallback Argos Translate | Implementado |
+| Fallback Google Translate (contextual) | Implementado |
+| Contexto pessoal (glossário, correções, regras) | Implementado |
+| Telemetria de latência em tempo real | Implementado |
+| Perfis por fonte (`mic`, `system`, `system_en`) | Implementado |
+| Ponte de texto (tradução manual) | Implementado |
+| Runtime Rust (captura + DSP + scheduler) | Opcional, compilável localmente |
+| Circuit breaker por provider (auto-recovery) | Implementado |
+| Rate limiter para Google Translate | Implementado |
+| Overlay flutuante de tradução (`--overlay`) | Implementado |
+| Health dashboard no terminal | Implementado |
+| Dispositivo de áudio configurável | Implementado |
+| Bridge Python/Rust runtime | Implementado |
 
 ---
 
@@ -97,6 +95,17 @@ Requer Rust 1.70+ (o script instala via rustup se necessário). Gera `rtxlator/r
 
 ---
 
+## Documentação de apoio
+
+| Documento | Quando usar |
+|---|---|
+| [`docs/GUIA-DE-USO-WINDOWS.md`](docs/GUIA-DE-USO-WINDOWS.md) | Preparar uma máquina Windows, diagnosticar áudio e rodar o projeto passo a passo. |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Entender as camadas Python, Rust, ASR, tradução, filas e UI. |
+| [`docs/RFC-001-performance-roadmap.md`](docs/RFC-001-performance-roadmap.md) | Revisar decisões de latência, fases técnicas e critérios de benchmark. |
+| [`docs/VALIDACAO-LOCAL.md`](docs/VALIDACAO-LOCAL.md) | Ver quais comandos foram conferidos localmente e quais pontos ainda dependem de hardware real. |
+
+---
+
 ## Uso rápido
 
 ```bat
@@ -118,8 +127,8 @@ Flags principais:
 | `--source` | `auto` | Idioma de origem (`pt`, `en`, `es`, `auto`) |
 | `--target` | `pt` | Idioma de destino |
 | `--model` | `base` | Modelo Whisper (`tiny`, `base`, `small`, `medium`, `large-v3`) |
-| `--latency-profile` | `balanced` | Perfil de latência (`fast`, `balanced`, `ultra`) |
-| `--ui-mode` | `stable` | Modo de UI (`stable`, `live`) |
+| `--latency-profile` | `ultra` | Perfil de latência (`ultra`, `balanced`, `quality`) |
+| `--ui-mode` | `auto` | Modo de UI (`auto`, `stable`, `live`) |
 | `--interpretation-mode` | `hybrid` | Modo de tradução (`fast`, `hybrid`, `contextual`) |
 | `--mic-id` | auto | Índice do microfone |
 | `--spk-id` | auto | Índice do dispositivo de saída (loopback) |
@@ -144,10 +153,11 @@ Flags principais:
 
 | Perfil | Flush (s) | Silêncio (chunks) | Uso recomendado |
 |---|---|---|---|
-| `fast` | 1.0 | 1 | Menor latência possível |
-| `balanced` | 1.2 | 2 | Padrão — vídeo/chamada |
-| `ultra` | 1.35 | 3 | Estabilidade máxima em mic |
-| `system_en` | 1.0 | 2 | Áudio do sistema em inglês |
+| `ultra` | 1.0 | 2 | Menor latência geral; padrão do runtime |
+| `balanced` | 3.0 | 3 | Mais tolerante para vídeo/chamada e áudio variável |
+| `quality` | 4.0 | 4 | Mais estabilidade quando a qualidade pesa mais que latência |
+
+Além do perfil escolhido na CLI, `source_profiles.py` aplica ajustes por fonte. O loopback (`system`) usa buffers mais tolerantes; quando `--source en` está fixo, o pipe do sistema pode virar `system_en` e usar Distil-Whisper EN-only com language lock imediato.
 
 ---
 
@@ -299,6 +309,8 @@ realtime_translator/
 ├── test_text_processing.py
 │
 ├── docs/
+│   ├── GUIA-DE-USO-WINDOWS.md
+│   ├── VALIDACAO-LOCAL.md
 │   └── RFC-001-performance-roadmap.md
 │
 ├── models/                  ← modelos baixados (Argos + HF cache)
@@ -334,14 +346,17 @@ Verifica CUDA, dispositivos de áudio, modelos instalados e status do runtime Ru
 .venv\Scripts\python.exe -m pytest
 ```
 
-22 testes Python. Para os testes Rust:
+61 testes Python foram coletados na validação local. Para os testes Rust:
 
 ```bat
 cd runtime-rs
-cargo test
+set PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
+cargo test --workspace
 ```
 
-13 testes no crate `dsp`, 7 no crate `audio`.
+O workspace Rust possui testes nos crates `audio`, `dsp`, `sched` e `ffi`. Em máquinas com Python 3.14, a variável `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1` evita o bloqueio de compatibilidade do PyO3 0.22.
+
+Detalhes de validação ficam em [`docs/VALIDACAO-LOCAL.md`](docs/VALIDACAO-LOCAL.md).
 
 ---
 

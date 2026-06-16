@@ -1,6 +1,7 @@
 .venv/
 __pycache__/
 .pytest_cache/
+.coverage
 .claude/
 *.pyc
 *.bak
@@ -13,4 +14,3 @@ rtxlator/runtime_rs.pyd
 *.egg-info/
 .mypy_cache/
 .ruff_cache/
-pt)

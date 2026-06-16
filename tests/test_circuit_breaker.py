@@ -150,9 +150,9 @@ class TestRateLimiter:
         assert rl.acquire() is False
 
     def test_call_allowed_after_interval(self):
-        rl = RateLimiter(max_per_second=20.0)  # 50ms interval
+        rl = RateLimiter(max_per_second=5.0)  # 200ms interval
         rl.acquire()
-        time.sleep(0.06)
+        time.sleep(0.25)
         assert rl.acquire() is True
 
     def test_tracks_limited_count(self):

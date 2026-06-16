@@ -1,5 +1,10 @@
-$BASE = 'C:\Users\Desktop\realtime_translator'
-$DESK = 'C:\Users\Desktop\Desktop'
+param(
+    [string]$BasePath = $PSScriptRoot,
+    [string]$DesktopPath = [Environment]::GetFolderPath('DesktopDirectory')
+)
+
+$BASE = (Resolve-Path -LiteralPath $BasePath).Path
+$DESK = $DesktopPath
 $WS   = New-Object -ComObject WScript.Shell
 
 function CriarAtalho($nome, $target, $cmdargs, $dir, $icon, $desc) {
@@ -17,6 +22,8 @@ function CriarAtalho($nome, $target, $cmdargs, $dir, $icon, $desc) {
 
 Write-Host ""
 Write-Host "Recriando atalhos na Area de Trabalho..."
+Write-Host "  Projeto:  $BASE"
+Write-Host "  Destino:  $DESK"
 Write-Host ""
 
 # 1. Tradutor (principal)
@@ -26,7 +33,7 @@ CriarAtalho `
     $null `
     $BASE `
     "C:\Windows\System32\imageres.dll,109" `
-    "Inicia o tradutor de audio em tempo real (RTX 5060 Ti + RedDragon)"
+    "Inicia o tradutor de audio em tempo real"
 
 # 2. Diagnostico
 CriarAtalho `
