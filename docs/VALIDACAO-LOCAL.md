@@ -21,7 +21,7 @@ O projeto declara Python 3.11+ e o CI usa Python 3.11. O Python 3.14 local é ú
 ### Testes Python
 
 ```bat
-python -m pytest -q
+python -m pytest tests/ --cov=rtxlator --cov-report=term-missing -q
 ```
 
 Resultado:
