@@ -4,6 +4,8 @@ Data da última revisão documental: 2026-06-16.
 
 Este registro descreve o que foi conferido localmente antes da atualização documental. Ele não substitui o CI do GitHub, mas ajuda a explicar o estado real do projeto e as decisões de manutenção.
 
+A matriz que liga casos de uso, arquivos, testes, evidências e limites fica em `docs/MATRIZ-DE-TESTES-E-EVIDENCIAS.md`.
+
 ## Ambiente usado
 
 | Item | Valor observado |
@@ -113,3 +115,34 @@ Para considerar uma alteração pronta neste repositório:
 3. `diagnostico.bat` deve listar dispositivos sem quebrar o terminal;
 4. `README.md` não deve prometer perfil, teste ou fluxo que o código não expõe;
 5. caminhos locais e estado pessoal não devem ser versionados.
+
+## Revalidação Da Matriz - 2026-06-16
+
+Escopo: inclusão de `docs/INDEX.md`, criação da matriz de testes/casos de uso/evidências e atualização dos links documentais.
+
+Comandos executados:
+
+```bat
+git diff --check
+python -m pytest tests/ --cov=rtxlator --cov-report=term-missing -q
+cd runtime-rs
+set PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
+cargo test --workspace
+```
+
+Resultado:
+
+| Área | Resultado observado |
+| --- | --- |
+| Diff | Sem erro de whitespace; apenas aviso esperado de normalização `LF -> CRLF` no Windows. |
+| Higiene pública | Sem caminho pessoal, token GitHub, chave `sk-*` real, IP remoto específico ou senha literal nos arquivos versionáveis revisados. |
+| Python | 61 testes passaram com Python 3.14.3. |
+| Rust audio | 7 testes passaram. |
+| Rust DSP | 13 testes passaram. |
+| Rust scheduler | 12 testes passaram. |
+| Rust FFI | 0 testes próprios; crate compilado no workspace. |
+
+Limite mantido:
+
+- esta revalidação não mede microfone real, loopback WASAPI, latência p95, consumo de VRAM ou fallback Google em rede instável;
+- esses pontos continuam dependentes de `diagnostico.bat`, hardware real e benchmark com corpus de fala.
