@@ -99,9 +99,11 @@ Requer Rust 1.70+ (o script instala via rustup se necessário). Gera `rtxlator/r
 
 | Documento | Quando usar |
 |---|---|
+| [`docs/INDEX.md`](docs/INDEX.md) | Navegar pela documentação principal do projeto. |
 | [`docs/GUIA-DE-USO-WINDOWS.md`](docs/GUIA-DE-USO-WINDOWS.md) | Preparar uma máquina Windows, diagnosticar áudio e rodar o projeto passo a passo. |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Entender as camadas Python, Rust, ASR, tradução, filas e UI. |
 | [`docs/RFC-001-performance-roadmap.md`](docs/RFC-001-performance-roadmap.md) | Revisar decisões de latência, fases técnicas e critérios de benchmark. |
+| [`docs/MATRIZ-DE-TESTES-E-EVIDENCIAS.md`](docs/MATRIZ-DE-TESTES-E-EVIDENCIAS.md) | Ligar casos de uso, regras técnicas, arquivos, testes, evidências e limites. |
 | [`docs/VALIDACAO-LOCAL.md`](docs/VALIDACAO-LOCAL.md) | Ver quais comandos foram conferidos localmente e quais pontos ainda dependem de hardware real. |
 
 ---
