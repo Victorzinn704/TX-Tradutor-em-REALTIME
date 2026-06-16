@@ -1,4 +1,4 @@
-/// Trait de captura de áudio — implementado pelo Codex para WASAPI.
+/// Trait de captura de áudio para as implementações WASAPI.
 ///
 /// O contrato é simples: `start()` começa a chamar `callback` com
 /// chunks de f32 brutos (pode ser multi-canal, taxa original).

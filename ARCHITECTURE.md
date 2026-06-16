@@ -41,7 +41,7 @@ O hot path pesado já roda em código nativo/CUDA. O Python aqui é orquestraç�
 | `opus_translator.py` | OpusMTTranslator: OPUS-MT via CTranslate2, fast lane ~40ms |
 | `audio_io.py` | Setup de streams WASAPI via pyaudiowpatch |
 | `audio_utils.py` | DSP Python: mono, resample, RMS, is_speech |
-| `latency_profile.py` | Perfis nomeados de tuning (fast/balanced/ultra/system_en) |
+| `latency_profile.py` | Perfis nomeados de tuning (`ultra`, `balanced`, `quality`) |
 | `source_profiles.py` | Overrides por fonte (mic tem mais padding; system_en tem flush agressivo) |
 | `context_store.py` | Contexto pessoal: glossário, correções, regras por domínio |
 | `text_processing.py` | Contrato textual: TextEnvelope, TextProcessor, cache key determinístico |
@@ -144,7 +144,7 @@ Python permanece correto para orquestração, cache, UI e integração com CTran
 
 1. **Ligar o runtime Rust ao pipeline principal** — hoje `AudioSegment` Rust existe mas o pipeline ainda usa `pyaudiowpatch`. O próximo passo é `AudioPipeline` consumir da fila Rust (`SegmentQueue`) em vez do callback Python.
 
-2. **Distil-Whisper para perfil `system_en_fast`** — modelo 4x mais rápido para áudio do sistema em inglês; manter `large-v3-turbo` como default multilíngue.
+2. **Benchmark do pipe `system_en`** — validar, com corpus real, o ganho do Distil-Whisper EN-only no áudio do sistema.
 
 3. **Overlay/janela flutuante** — exibir tradução sobre a janela ativa, sem terminal visível.
 

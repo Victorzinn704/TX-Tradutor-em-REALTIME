@@ -128,7 +128,7 @@ if errorlevel 1 (
     echo   O programa funciona em CPU enquanto isso, so sera mais lento.
 )
 
-:: ── Distil-Whisper EN-only (perfil system_en_fast) ───────────────
+:: ── Distil-Whisper EN-only (perfil system_en) ────────────────────
 echo.
 echo [7/7] Pre-carregando Distil-Whisper para perfil system_en...
 echo   (usado automaticamente com --source en + loopback)

@@ -62,12 +62,12 @@ Em outras palavras: o gargalo restante está mais na disciplina de streaming e n
 
 | Fase | O que muda | Critério de conclusão | Status |
 |---|---|---|---|
-| 1 | `Language lock` + métricas (`first_partial_ms`, `queue_wait_ms`, `drop_rate`, `fallback_rate`) | `drop_rate < 2%` e `first_partial_ms p95 < 400ms` | ✅ Concluída |
-| 2 | `Distil-Whisper` para perfil `system_en_fast` | `first_partial_ms p95 < 200ms` para EN | ✅ Concluída |
-| 3 | `OPUS-MT/CTranslate2` como fast lane | `translate_ms p95 < 50ms` | ✅ Concluída |
-| 4 | `Two-stage VAD` (WebRTC pre-gate + Silero confirmação) | `drop_rate < 0.5%` | ✅ Concluída |
-| 5 | `ASR central scheduler` com fila de prioridade `partial/final` | filas previsíveis e sem bloqueio de `final` | ✅ Concluída (Rust) |
-| 6 | `Rust` para captura de áudio + DSP + supervisor | revisão após benchmark das fases 1–5 | ✅ Concluída — pendente integração ao pipeline principal |
+| 1 | `Language lock` + métricas (`first_partial_ms`, `queue_wait_ms`, `drop_rate`, `fallback_rate`) | `drop_rate < 2%` e `first_partial_ms p95 < 400ms` | Concluída |
+| 2 | `Distil-Whisper` para perfil `system_en` | `first_partial_ms p95 < 200ms` para EN | Implementada; benchmark final pendente |
+| 3 | `OPUS-MT/CTranslate2` como fast lane | `translate_ms p95 < 50ms` | Implementada; benchmark final pendente |
+| 4 | `Two-stage VAD` (WebRTC pre-gate + Silero confirmação) | `drop_rate < 0.5%` | Concluída |
+| 5 | `ASR central scheduler` com fila de prioridade `partial/final` | filas previsíveis e sem bloqueio de `final` | Implementado no runtime Rust |
+| 6 | `Rust` para captura de áudio + DSP + supervisor | revisão após benchmark das fases 1-5 | Implementado; integração plena ao pipeline principal pendente |
 
 ---
 
@@ -137,7 +137,7 @@ O caminho preferido é:
 Ele não precisa ser o default multilíngue global. O melhor desenho é:
 
 - `whisper-large-v3-turbo` como default multilíngue
-- `Distil-Whisper` como perfil especializado `system_en_fast`
+- `Distil-Whisper` como perfil especializado `system_en`
 
 ---
 
@@ -152,7 +152,7 @@ Ele não precisa ser o default multilíngue global. O melhor desenho é:
 
 ### Fase 2
 
-- `[P: média]` adicionar perfil `system_en_fast`
+- `[P: média]` adicionar perfil `system_en`
 - `[P: média]` integrar benchmark A/B entre `base`, `small`, `large-v3-turbo` e `Distil-Whisper`
 - `[P: baixa]` ajustar launcher/presets para perfil EN-only
 
@@ -198,7 +198,7 @@ As fases acima devem ser medidas com corpus real do usuário, em no mínimo este
 ### Alvos iniciais
 
 - `first_partial_ms p95 < 400ms` no cenário geral
-- `first_partial_ms p95 < 200ms` em `system_en_fast`
+- `first_partial_ms p95 < 200ms` em `system_en`
 - `translate_ms p95 < 50ms` na fast lane OPUS-MT
 - `drop_rate < 0.5%` após two-stage VAD
 

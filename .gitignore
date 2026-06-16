@@ -13,4 +13,3 @@ rtxlator/runtime_rs.pyd
 *.egg-info/
 .mypy_cache/
 .ruff_cache/
-pt)
