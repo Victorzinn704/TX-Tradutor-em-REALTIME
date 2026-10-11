@@ -1,6 +1,6 @@
 # Core
 pyaudiowpatch>=0.2.12
-faster-whisper>=1.0.0
+faster-whisper>=1.2.1
 ctranslate2>=4.7.1
 deep-translator>=1.11.4
 scipy>=1.11.0
