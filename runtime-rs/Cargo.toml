@@ -10,6 +10,6 @@ members  = [
 [workspace.dependencies]
 rubato    = "0.15"
 rtrb      = "0.3"
-thiserror = "1"
+thiserror = "2"
 tracing   = "0.1"
 pyo3      = "0.22"
