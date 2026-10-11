@@ -27,3 +27,7 @@ cargo check
 - nao versionar modelos baixados, binarios gerados ou audio real;
 - documentar novas dependencias nativas;
 - preservar fallback quando hardware, CUDA ou dispositivo de audio nao estiverem disponiveis.
+
+## Fluxo Git e revisão
+
+Siga também o [fluxo de issues, branches, commits e pull requests](CONTRIBUTING-GIT.md).
