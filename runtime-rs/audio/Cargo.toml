@@ -9,4 +9,4 @@ tracing      = { workspace = true }
 rtxlator-dsp = { path = "../dsp" }
 
 [target.'cfg(windows)'.dependencies]
-wasapi = "0.13"
+wasapi = "0.25"
