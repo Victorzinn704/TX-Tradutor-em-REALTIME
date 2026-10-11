@@ -8,7 +8,7 @@ members  = [
 ]
 
 [workspace.dependencies]
-rubato    = "0.15"
+rubato    = "5.0"
 rtrb      = "0.3"
 thiserror = "1"
 tracing   = "0.1"
