@@ -14,3 +14,24 @@ rtxlator/runtime_rs.pyd
 *.egg-info/
 .mypy_cache/
 .ruff_cache/
+
+# Public repository boundary (security review 2026-11-08)
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+credentials*.json
+service-account*.json
+secrets/
+private/
+data/private/
+*.log
+*.bundle
